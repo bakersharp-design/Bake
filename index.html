@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Hold'em Poker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+        }
+        .card {
+            display: inline-block;
+            width: 50px;
+            height: 70px;
+            background-color: #e74c3c;
+            border-radius: 5px;
+            margin: 5px;
+            line-height: 70px;
+            font-size: 16px;
+            color: white;
+        }
+        .hand, .community-cards {
+            margin: 20px 0;
+        }
+        .betting {
+            margin: 20px;
+        }
+        .button {
+            background-color: #3498db;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            color: white;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        #chips, #pot {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #bet-amount {
+            font-size: 16px;
+            padding: 5px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Texas Hold'em Poker</h1>
+    <div id="player-hand" class="hand"></div>
+    <div id="community-cards" class="community-cards"></div>
+    
+    <div id="betting" class="betting">
+        <input type="number" id="bet-amount" placeholder="Enter Bet Amount" style="font-size: 16px; padding: 5px; width: 100px;">
+        <button id="bet-button" class="button" onclick="placeBet()">Bet</button>
+        <button id="call-button" class="button" onclick="call()">Call</button>
+        <button id="fold-button" class="button" onclick="fold()">Fold</button>
+    </div>
+
+    <div id="chips">Chips: 1000</div>
+    <div id="pot">Pot: 0</div>
+    <div id="winner"></div>
+    
+    <button class="button" onclick="playGame()">Deal Cards</button>
+
+    <script>
+        const suits = ['♠', '♣', '♦', '♥'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        let deck = [];
+        let playerHand = [];
+        let communityCards = [];
+        let pot = 0;
+        let playerChips = 1000;
+        let currentBet = 0;
+        let playerAction = '';
+
+        // Create a deck of 52 cards
+        function createDeck() {
+            deck = [];
+            for (let suit of suits) {
+                for (let value of values) {
+                    deck.push(value + suit);
+                }
+            }
+            shuffleDeck();
+        }
+
+        // Shuffle the deck
+        function shuffleDeck() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]]; // Swap
+            }
+        }
+
+        // Deal two hole cards to the player
+        function dealPlayerHand() {
+            playerHand = [deck.pop(), deck.pop()];
+        }
+
+        // Deal five community cards
+        function dealCommunityCards() {
+            communityCards = [];
+            // Burn one card for the "flop"
+            deck.pop();
+            // The flop (3 cards)
+            communityCards.push(deck.pop(), deck.pop(), deck.pop());
+            // Burn one card for the "turn"
+            deck.pop();
+            // The turn (1 card)
+            communityCards.push(deck.pop());
+            // Burn one card for the "river"
+            deck.pop();
+            // The river (1 card)
+            communityCards.push(deck.pop());
+        }
+
+        // Display the cards in HTML
+        function displayCards() {
+            document.getElementById('player-hand').innerHTML = playerHand.map(card => `<div class="card">${card}</div>`).join('');
+            document.getElementById('community-cards').innerHTML = communityCards.map(card => `<div class="card">${card}</div>`).join('');
+            document.getElementById('chips').innerText = `Chips: ${playerChips}`;
+            document.getElementById('pot').innerText = `Pot: ${pot}`;
+        }
+
+        // Update the pot and player chips
+        function updatePotAndChips() {
+            document.getElementById('chips').innerText = `Chips: ${playerChips}`;
+            document.getElementById('pot').innerText = `Pot: ${pot}`;
+        }
+
+        // Place a bet
+        function placeBet() {
+            const betAmount = parseInt(document.getElementById('bet-amount').value);
+            if (betAmount > playerChips) {
+                alert("You don't have enough chips.");
+                return;
+            }
+            if (betAmount <= 0) {
+                alert("Bet must be greater than 0.");
+                return;
+            }
+
+            playerChips -= betAmount;
+            pot += betAmount;
+            currentBet = betAmount;
+            playerAction = 'bet';
+            updatePotAndChips();
+            disableBettingOptions();
+            nextRound();
+        }
+
+        // Call the bet (matching the current bet)
+        function call() {
+            if (currentBet === 0) {
+                alert("No bet to call.");
+                return;
+            }
+
+            if (playerChips < currentBet) {
+                alert("You don't have enough chips to call.");
+                return;
+            }
+
+            playerChips -= currentBet;
+            pot += currentBet;
+            playerAction = 'call';
+            updatePotAndChips();
+            disableBettingOptions();
+            nextRound();
+        }
+
+        // Fold the hand
+        function fold() {
+            playerAction = 'fold';
+            alert("You folded.");
+            disableBettingOptions();
+            resetGame();
+        }
+
+        // Disable betting buttons after the player has made an action
+        function disableBettingOptions() {
+            document.getElementById('bet-button').disabled = true;
+            document.getElementById('call-button').disabled = true;
+            document.getElementById('fold-button').disabled = true;
+        }
+
+        // Enable betting options for the next round
+        function enableBettingOptions() {
+            document.getElementById('bet-button').disabled = false;
+            document.getElementById('call-button').disabled = false;
+            document.getElementById('fold-button').disabled = false;
+        }
+
+        // Simulate the next round of betting (after player action)
+        function nextRound() {
+            // For simplicity, we'll just show the community cards and skip to winner determination
+            setTimeout(() => {
+                determineWinner();
+            }, 1000);
+        }
+
+        // Placeholder function to determine the winner
+        function determineWinner() {
+            if (playerAction === 'fold') {
+                document.getElementById('winner').innerText = "You folded. You lost.";
+                return;
+            }
+
+            // For now, we're just displaying the player's result
+            if (playerChips > 0) {
+                document.getElementById('winner').innerText = 'You win! Pot: ' + pot;
+            } else {
+                document.getElementById('winner').innerText = 'You ran out of chips. Game Over.';
+            }
+
+            resetGame();
+        }
+
+        // Reset game after a round
+        function resetGame() {
+            pot = 0;
+            currentBet = 0;
+            playerAction = '';
+            setTimeout(() => {
+                document.getElementById('bet-amount').value = '';
+                enableBettingOptions();
+            }, 2000);
+        }
+
+        // Main function to deal and play the game
+        function playGame() {
+            createDeck();
+            dealPlayerHand();
+            dealCommunityCards();
+            displayCards();
+            updatePotAndChips();
+            enableBettingOptions();
+        }
+    </script>
+</body>
+</html>
